@@ -60,10 +60,14 @@ info4.pdf: In-network institutions include Overlake, Swedish and others in the r
     async def run(self, q: str, overrides: dict[str, Any]) -> dict[str, Any]:
         has_text = overrides.get("retrieval_mode") in ["text", "hybrid", None]
         has_vector = overrides.get("retrieval_mode") in ["vectors", "hybrid", None]
-        use_semantic_captions = True if overrides.get("semantic_captions") and has_text else False
+        use_semantic_captions = bool(overrides.get("semantic_captions") and has_text)
         top = overrides.get("top") or 3
         exclude_category = overrides.get("exclude_category") or None
-        filter = "category ne '{}'".format(exclude_category.replace("'", "''")) if exclude_category else None
+        filter = (
+            f"""category ne '{exclude_category.replace("'", "''")}'"""
+            if exclude_category
+            else None
+        )
 
         # If retrieval mode includes vectors, compute an embedding for the query
         if has_vector:
@@ -102,11 +106,15 @@ info4.pdf: In-network institutions include Overlake, Swedish and others in the r
             )
         if use_semantic_captions:
             results = [
-                doc[self.sourcepage_field] + ": " + nonewlines(" . ".join([c.text for c in doc["@search.captions"]]))
+                f"{doc[self.sourcepage_field]}: "
+                + nonewlines(" . ".join([c.text for c in doc["@search.captions"]]))
                 async for doc in r
             ]
         else:
-            results = [doc[self.sourcepage_field] + ": " + nonewlines(doc[self.content_field]) async for doc in r]
+            results = [
+                f"{doc[self.sourcepage_field]}: {nonewlines(doc[self.content_field])}"
+                async for doc in r
+            ]
         content = "\n".join(results)
 
         message_builder = MessageBuilder(

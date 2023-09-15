@@ -35,15 +35,12 @@ def num_tokens_from_messages(message: dict[str, str], model: str) -> int:
         output: 11
     """
     encoding = tiktoken.encoding_for_model(get_oai_chatmodel_tiktok(model))
-    num_tokens = 2  # For "role" and "content" keys
-    for key, value in message.items():
-        num_tokens += len(encoding.encode(value))
-    return num_tokens
+    return 2 + sum(len(encoding.encode(value)) for value in message.values())
 
 
 def get_oai_chatmodel_tiktok(aoaimodel: str) -> str:
     message = "Expected Azure OpenAI ChatGPT model name"
-    if aoaimodel == "" or aoaimodel is None:
+    if not aoaimodel or aoaimodel is None:
         raise ValueError(message)
     if aoaimodel not in AOAI_2_OAI and aoaimodel not in MODELS_2_TOKEN_LIMITS:
         raise ValueError(message)
