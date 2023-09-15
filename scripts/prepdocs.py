@@ -59,7 +59,7 @@ def calculate_tokens_emb_aoai(input: str):
 
 def blob_name_from_file_page(filename, page=0):
     if os.path.splitext(filename)[1].lower() == ".pdf":
-        return os.path.splitext(os.path.basename(filename))[0] + f"-{page}" + ".pdf"
+        return f"{os.path.splitext(os.path.basename(filename))[0]}-{page}.pdf"
     else:
         return os.path.basename(filename)
 
@@ -123,7 +123,7 @@ def table_to_html(table):
     for row_cells in rows:
         table_html += "<tr>"
         for cell in row_cells:
-            tag = "th" if (cell.kind == "columnHeader" or cell.kind == "rowHeader") else "td"
+            tag = "th" if cell.kind in ["columnHeader", "rowHeader"] else "td"
             cell_spans = ""
             if cell.column_span > 1:
                 cell_spans += f" colSpan={cell.column_span}"
@@ -365,9 +365,8 @@ def create_search_index():
         if args.verbose:
             print(f"Creating {args.index} search index")
         index_client.create_index(index)
-    else:
-        if args.verbose:
-            print(f"Search index {args.index} already exists")
+    elif args.verbose:
+        print(f"Search index {args.index} already exists")
 
 
 def update_embeddings_in_batch(sections):
@@ -411,21 +410,19 @@ def index_sections(filename, sections):
     search_client = SearchClient(
         endpoint=f"https://{args.searchservice}.search.windows.net/", index_name=args.index, credential=search_creds
     )
-    i = 0
     batch = []
-    for s in sections:
+    for i, s in enumerate(sections, start=1):
         batch.append(s)
-        i += 1
         if i % 1000 == 0:
             results = search_client.upload_documents(documents=batch)
-            succeeded = sum([1 for r in results if r.succeeded])
+            succeeded = sum(1 for r in results if r.succeeded)
             if args.verbose:
                 print(f"\tIndexed {len(results)} sections, {succeeded} succeeded")
             batch = []
 
     if len(batch) > 0:
         results = search_client.upload_documents(documents=batch)
-        succeeded = sum([1 for r in results if r.succeeded])
+        succeeded = sum(1 for r in results if r.succeeded)
         if args.verbose:
             print(f"\tIndexed {len(results)} sections, {succeeded} succeeded")
 
@@ -481,7 +478,7 @@ def read_files(
             remove_from_index(filename)
         else:
             if os.path.isdir(filename):
-                read_files(filename + "/*", use_vectors, vectors_batch_support)
+                read_files(f"{filename}/*", use_vectors, vectors_batch_support)
                 continue
             try:
                 if not args.skipblobs:
